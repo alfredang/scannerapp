@@ -1,85 +1,142 @@
-# Scanner — Native iOS Document Scanner
+<div align="center">
 
-A clean, fast, fully-offline document scanner for iOS 18+, built with **Swift 6**, **SwiftUI**,
-and **MVVM**. Scan with VisionKit, enhance with Core Image filters, recognize text with Vision
-OCR, and export as PDF or JPG to Photos, Files, or iCloud Drive — all on-device, no backend.
+# 📄 Tertiary Scanner
 
-## Features
+[![Platform](https://img.shields.io/badge/Platform-iOS%2018%2B-blue?logo=apple)](https://www.apple.com/ios/)
+[![Swift](https://img.shields.io/badge/Swift-6-orange?logo=swift&logoColor=white)](https://swift.org)
+[![SwiftUI](https://img.shields.io/badge/SwiftUI-MVVM-005FCC?logo=swift&logoColor=white)](https://developer.apple.com/xcode/swiftui/)
+[![VisionKit](https://img.shields.io/badge/Scanner-VisionKit-34C759?logo=apple)](https://developer.apple.com/documentation/visionkit)
+[![Offline](https://img.shields.io/badge/100%25-Offline-success)](#)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](#license)
 
-- **Scanning** — VisionKit document camera: auto edge detection, perspective correction,
-  auto-crop, multi-page capture, manual corner adjustment, retake, flash, auto-capture.
-- **8 enhancement filters** (Core Image) — Original, Auto, White Document, Black & White,
-  Denoise, Brighten, Sharpen Text, Receipt — with live preview, per-page or apply-to-all.
-- **OCR** (Vision) — recognize text on every page; copy, share, and **search your library by content**.
-- **Export** — single/multi-page PDF (A4 / Letter / fit, adjustable quality) and high-quality JPG.
-- **Destinations** — Photos, Files, iCloud Drive (via document picker), local app library.
-- **Share** — native share sheet (AirDrop, Messages, Mail, WhatsApp, Print, …).
-- **Library** — SwiftData-backed: thumbnails, name, date, page count; rename, delete, duplicate,
-  share, export, search.
-- **Accessibility** — Dynamic Type, VoiceOver labels, Dark/Light, semantic colors.
+**A clean, fast, fully-offline native iOS document scanner — scan, enhance, OCR, and export to PDF or JPG in a few taps. Nothing ever leaves your device.**
 
-## Architecture (MVVM)
+</div>
+
+## Screenshots
+
+| iPhone | iPad |
+|:------:|:----:|
+| <img src="screenshots/iphone-6.9-home.png" width="280"> | <img src="screenshots/ipad-13-home.png" width="420"> |
+
+## About
+
+Tertiary Scanner is a native iOS document scanner built with **Swift 6**, **SwiftUI**, and an
+**MVVM** architecture. It uses Apple's VisionKit document camera for edge detection and
+perspective correction, Core Image for enhancement filters, and the Vision framework for
+on-device OCR. Documents are stored locally with SwiftData — no account, no cloud, no tracking.
+
+### Key Features
+
+| | Feature |
+|---|---|
+| 📸 | **Scanning** — VisionKit auto edge detection, perspective correction, auto-crop, multi-page, manual corner adjust, retake, flash |
+| 🎨 | **8 enhancement filters** — Original, Auto, White Document, Black & White, Denoise, Brighten, Sharpen Text, Receipt (live preview) |
+| 🔤 | **OCR** — Vision text recognition; copy, export, and **search your library by content** |
+| 📄 | **Export** — single/multi-page PDF (A4 / Letter / fit, adjustable quality) and high-quality JPG |
+| 📤 | **Destinations** — Photos, Files, iCloud Drive, native iOS Share Sheet (AirDrop, Mail, Messages, Print, …) |
+| 🗂️ | **Library** — SwiftData-backed: thumbnails, rename, delete, duplicate, share, export, search |
+| ♿ | **Accessibility** — Dynamic Type, VoiceOver, Dark/Light, semantic colors |
+
+## Tech Stack
+
+| Category | Technologies |
+|---|---|
+| **Language / UI** | Swift 6, SwiftUI, MVVM |
+| **Scanning** | VisionKit (`VNDocumentCameraViewController`) |
+| **OCR** | Vision (`VNRecognizeTextRequest`) |
+| **Image Processing** | Core Image (`CIFilter`) |
+| **PDF** | PDFKit / `UIGraphicsPDFRenderer` |
+| **Persistence** | SwiftData (metadata) + on-disk files (images/PDFs) |
+| **Project Gen** | XcodeGen (`project.yml`) |
+| **Min OS** | iOS 18+ · universal (iPhone + iPad) |
+
+## Architecture
 
 ```
-App/          DocumentScannerApp.swift   — @main, SwiftData ModelContainer
-Models/       ScanDocument, ScanPage (@Model), FilterType
-Services/     ScannerService (VisionKit), OCRService (Vision), PDFService,
-              ExportService (Photos/Files), StorageService (files + SwiftData)
-ViewModels/   ScannerViewModel (capture→edit→save), LibraryViewModel
-Views/        Home, Scanner, Preview, Filter, Export, Library, DocumentDetail,
-              Settings, ScanEditor + Components (ShareSheet, DocumentExporter, …)
-Utilities/    ImageProcessor (Core Image), SettingsStore, Constants
-Resources/    Assets.xcassets (AppIcon, AccentColor)
+┌──────────────────────────── SwiftUI Views ────────────────────────────┐
+│  Home · Scanner · Preview · Filter · Export · Library · Detail · Settings │
+└───────────────┬───────────────────────────────────────┬────────────────┘
+                │ @MainActor @Observable                 │
+        ┌───────▼────────┐                       ┌────────▼────────┐
+        │ ScannerViewModel│                       │ LibraryViewModel │
+        └───────┬────────┘                       └────────┬────────┘
+                │                                          │
+   ┌────────────▼───────── Services (async) ───────────────▼───────────┐
+   │ ScannerService · OCRService · PDFService · ExportService · Storage │
+   └────────────┬──────────────────────────────────────────┬──────────┘
+       Core Image│ Vision │ PDFKit │ Photos/Files           │ SwiftData
+   ┌────────────▼──────────────────────┐      ┌─────────────▼──────────┐
+   │ ImageProcessor (shared CIContext) │      │ ScanDocument / ScanPage │
+   └───────────────────────────────────┘      │  + files on disk        │
+                                               └─────────────────────────┘
 ```
 
-- **Persistence**: document/page **metadata** in SwiftData; page **images, thumbnails, and PDFs**
-  as files under Application Support (`Constants.scansDirectory`). Models store filenames only.
-- **Swift 6 strict concurrency**: ViewModels are `@MainActor @Observable`; heavy work (Core Image,
-  OCR, PDF) runs in async services and crosses actor boundaries via `Data`/`CGImage`.
+## Project Structure
 
-## Build & Run
+```
+scannerapp/
+├── project.yml                 # XcodeGen spec (signing, Info.plist, entitlements)
+├── DocumentScannerApp/
+│   ├── App/                    # @main App + SwiftData ModelContainer
+│   ├── Models/                 # ScanDocument, ScanPage (@Model), FilterType
+│   ├── Services/               # Scanner, OCR, PDF, Export, Storage
+│   ├── ViewModels/             # ScannerViewModel, LibraryViewModel
+│   ├── Views/                  # SwiftUI screens + Components/
+│   ├── Utilities/              # ImageProcessor, SettingsStore, Constants
+│   └── Resources/              # Assets.xcassets, PrivacyInfo.xcprivacy
+├── screenshots/                # App Store / README screenshots
+└── .claude/skills/             # app-store-submission, mobile-ios-design, ipados-design-guidelines
+```
 
-Requires **Xcode 26+** and **[XcodeGen](https://github.com/yonaskolb/XcodeGen)** (`brew install xcodegen`).
+## Getting Started
 
+### Prerequisites
+- **Xcode 26+** and **[XcodeGen](https://github.com/yonaskolb/XcodeGen)** (`brew install xcodegen`)
+
+### Build & Run
 ```bash
-xcodegen generate          # regenerate DocumentScannerApp.xcodeproj from project.yml
+git clone https://github.com/alfredang/scannerapp.git
+cd scannerapp
+xcodegen generate
 open DocumentScannerApp.xcodeproj
-# or from the CLI:
+```
+Or from the CLI (Simulator):
+```bash
 xcodebuild -project DocumentScannerApp.xcodeproj -scheme DocumentScannerApp \
   -destination 'platform=iOS Simulator,name=iPhone 17' build CODE_SIGNING_ALLOWED=NO
 ```
 
-The project uses **automatic signing with an empty team**, so **Simulator builds need no Apple
-account**. To run on a physical device, open the target → Signing & Capabilities → select your Team.
+> The Simulator has no camera, so the **Scan** button falls back to the photo picker.
+> Launch with `SCANNER_SEED_DEMO=1` to populate sample documents for testing/screenshots.
 
-### Simulator note
-The Simulator has no camera, so the **Scan** button falls back to the **photo picker**
-(`PhotoImportView`) — pick image(s) to drive the full filter → OCR → export pipeline. A sample
-document image is included in this Simulator's Photos for quick testing.
+To run on a device, open the target → **Signing & Capabilities** → select your Team.
 
-## Manual test checklist (device)
+## App Store
 
-- Scan a page; verify edge detection, perspective correction, auto-crop.
-- Multi-page: add pages, reorder via order, delete a page, retake.
-- Apply each of the 8 filters; "Apply to All Pages".
-- Rotate a page; confirm it persists.
-- Run OCR; copy and share the recognized text; search the library by that text.
-- Export PDF (A4/Letter/fit, quality slider) and JPG.
-- Save to Photos, Files, iCloud Drive; Share via the share sheet; Print.
-- Library: rename, duplicate, delete, share.
+Available as **Tertiary Scanner** (`com.tertiaryinfotech.scannerapp`). The end-to-end
+submission workflow (API-first, with the few web-UI-only steps documented) lives in
+[`.claude/skills/app-store-submission/`](.claude/skills/app-store-submission/).
 
-## App Store submission
+## Contributing
 
-See [`.claude/skills/app-store-submission/`](.claude/skills/app-store-submission/) — an
-API-first submission workflow already filled in for this app (bundle id
-`com.scannerapp.DocumentScanner`, Productivity category, Camera + Photo-Add permissions,
-universal iPhone/iPad, "Data Not Collected"). Two design-reference skills are bundled too:
-`mobile-ios-design` and `ipados-design-guidelines`.
-
-> **App icon note:** the bundled `AppIcon-1024.png` is a generated placeholder that currently
-> has an alpha channel. App Store Connect requires a **flat, no-alpha** 1024 icon — flatten it
-> (or regenerate via the submission skill's `make_app_icon.swift`) before archiving for release.
+1. Fork the repo
+2. Create a feature branch (`git checkout -b feature/amazing`)
+3. Commit your changes
+4. Open a Pull Request
 
 ## License
 
-MIT
+Released under the MIT License.
+
+---
+
+<div align="center">
+
+**Developed by Tertiary Infotech Academy Pte. Ltd.**
+
+⭐ Star this repo if you find it useful!
+
+*Powered by Tertiary Infotech Academy Pte Ltd*
+
+</div>
