@@ -7,9 +7,14 @@
 [![SwiftUI](https://img.shields.io/badge/SwiftUI-MVVM-005FCC?logo=swift&logoColor=white)](https://developer.apple.com/xcode/swiftui/)
 [![VisionKit](https://img.shields.io/badge/Scanner-VisionKit-34C759?logo=apple)](https://developer.apple.com/documentation/visionkit)
 [![Offline](https://img.shields.io/badge/100%25-Offline-success)](#)
+[![App Store](https://img.shields.io/badge/App%20Store-Download-0D96F6?logo=app-store&logoColor=white)](https://apps.apple.com/us/app/tertiary-scanner/id6779988762)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](#license)
 
 **A clean, fast, fully-offline native iOS document scanner — scan, enhance, OCR, and export to PDF or JPG in a few taps. Nothing ever leaves your device.**
+
+### 📲 [Download on the App Store](https://apps.apple.com/us/app/tertiary-scanner/id6779988762)
+
+[<img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" alt="Download on the App Store" height="56">](https://apps.apple.com/us/app/tertiary-scanner/id6779988762)
 
 </div>
 
@@ -114,8 +119,11 @@ To run on a device, open the target → **Signing & Capabilities** → select yo
 
 ## App Store
 
-Available as **Tertiary Scanner** (`com.tertiaryinfotech.scannerapp`). The end-to-end
-submission workflow (API-first, with the few web-UI-only steps documented) lives in
+**Tertiary Scanner** is live on the App Store — **[download it here](https://apps.apple.com/us/app/tertiary-scanner/id6779988762)** (`com.tertiaryinfotech.scannerapp`).
+
+[<img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" alt="Download on the App Store" height="56">](https://apps.apple.com/us/app/tertiary-scanner/id6779988762)
+
+The end-to-end submission workflow (API-first, with the few web-UI-only steps documented) lives in
 [`.claude/skills/app-store-submission/`](.claude/skills/app-store-submission/).
 
 ## Contributing
