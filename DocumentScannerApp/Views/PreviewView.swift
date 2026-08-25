@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Shows captured pages in a paged carousel with per-page rotate / delete,
-/// add-more-pages, a path to filters, and a path to export.
+/// Step 1 of the scan flow: review the captured pages, retake the scan,
+/// add or delete pages, then continue to Adjust & Filters.
 struct PreviewView: View {
     @Bindable var viewModel: ScannerViewModel
     /// Dismisses the entire editor flow (the fullScreenCover).
@@ -9,6 +9,8 @@ struct PreviewView: View {
 
     @State private var selectedIndex = 0
     @State private var showAddPages = false
+    @State private var showRetake = false
+    @State private var pendingRetake = false
 
     private var pages: [WorkingPage] { viewModel.working?.pages ?? [] }
 
@@ -18,9 +20,10 @@ struct PreviewView: View {
                 ContentUnavailableView("No Pages", systemImage: "doc",
                                        description: Text("Add a page to continue."))
             } else {
+                stepHeader
                 pager
                 pageIndicator
-                controlBar
+                bottomBar
             }
         }
         .navigationTitle("Preview")
@@ -33,12 +36,15 @@ struct PreviewView: View {
                 }
             }
             ToolbarItem(placement: .topBarTrailing) {
-                NavigationLink {
-                    ExportView(viewModel: viewModel, onFinish: onFinish)
-                } label: {
-                    Text("Next").bold()
-                }
-                .disabled(pages.isEmpty)
+                Button("Retake") { showRetake = true }
+                    .disabled(pages.isEmpty)
+            }
+        }
+        .onAppear {
+            // A Retake requested from Step 2 fires once that screen has popped back here.
+            if pendingRetake {
+                pendingRetake = false
+                showRetake = true
             }
         }
         .fullScreenCover(isPresented: $showAddPages) {
@@ -48,9 +54,25 @@ struct PreviewView: View {
             }
             .ignoresSafeArea()
         }
+        .fullScreenCover(isPresented: $showRetake) {
+            ScannerView { images in
+                showRetake = false
+                guard !images.isEmpty else { return }
+                viewModel.beginNewDocument(with: images)
+                selectedIndex = 0
+            }
+            .ignoresSafeArea()
+        }
     }
 
     // MARK: - Pieces
+
+    private var stepHeader: some View {
+        Text("Review your scan — Export, or Adjust first")
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .padding(.vertical, 6)
+    }
 
     private var pager: some View {
         TabView(selection: $selectedIndex) {
@@ -74,20 +96,40 @@ struct PreviewView: View {
             .padding(.vertical, 6)
     }
 
+    private var bottomBar: some View {
+        VStack(spacing: 8) {
+            controlBar
+            // Looks good → export straight away; Adjust & Filters is the optional detour.
+            HStack(spacing: 12) {
+                NavigationLink {
+                    FilterView(viewModel: viewModel,
+                               pageIndex: selectedIndex,
+                               onFinish: onFinish,
+                               onRetake: { pendingRetake = true })
+                } label: {
+                    Text("Adjust")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+
+                NavigationLink {
+                    ExportView(viewModel: viewModel, onFinish: onFinish)
+                } label: {
+                    Text("Export")
+                        .bold()
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+            }
+            .controlSize(.large)
+            .padding(.horizontal)
+            .padding(.bottom, 8)
+        }
+        .background(.bar)
+    }
+
     private var controlBar: some View {
         HStack(spacing: 0) {
-            control("Rotate", systemImage: "rotate.right") {
-                guard pages.indices.contains(selectedIndex) else { return }
-                pages[selectedIndex].rotateClockwise()
-            }
-            NavigationLink {
-                if pages.indices.contains(selectedIndex) {
-                    FilterView(viewModel: viewModel, pageIndex: selectedIndex)
-                }
-            } label: {
-                controlLabel("Filters", systemImage: "wand.and.stars")
-            }
-            .buttonStyle(.plain)
             control("Add Page", systemImage: "plus.viewfinder") {
                 showAddPages = true
             }
@@ -96,7 +138,6 @@ struct PreviewView: View {
             }
         }
         .padding(.vertical, 10)
-        .background(.bar)
     }
 
     private func control(_ title: String, systemImage: String,

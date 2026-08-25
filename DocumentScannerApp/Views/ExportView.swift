@@ -10,10 +10,15 @@ struct ExportView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var settings = SettingsStore.shared
 
-    @State private var shareItems: [Any] = []
-    @State private var showShare = false
-    @State private var exportURLs: [URL] = []
-    @State private var showFileExporter = false
+    /// Identifiable payloads so `sheet(item:)` presents with the URLs already set —
+    /// `sheet(isPresented:)` + separate state raced and showed an empty sheet on first tap.
+    private struct SharePayload: Identifiable {
+        let id = UUID()
+        let urls: [URL]
+    }
+
+    @State private var sharePayload: SharePayload?
+    @State private var exportPayload: SharePayload?
     @State private var statusMessage: String?
     @State private var isWorking = false
 
@@ -31,6 +36,12 @@ struct ExportView: View {
 
     var body: some View {
         Form {
+            Section {
+                Text("Share, AirDrop, or save your document.")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.secondary)
+            }
+
             Section("Document") {
                 TextField("Name", text: nameBinding)
                 LabeledContent("Pages", value: "\(pages.count)")
@@ -55,7 +66,7 @@ struct ExportView: View {
             }
 
             Section("Export") {
-                Button { sharePDF() } label: { Label("Share PDF", systemImage: "square.and.arrow.up") }
+                Button { sharePDF() } label: { Label("Share / AirDrop PDF", systemImage: "square.and.arrow.up") }
                 Button { saveToFiles(asPDF: true) } label: { Label("Save PDF to Files / iCloud", systemImage: "folder") }
                 Button { saveToFiles(asPDF: false) } label: { Label("Save JPGs to Files / iCloud", systemImage: "photo.on.rectangle") }
                 Button { saveToPhotos() } label: { Label("Save Images to Photos", systemImage: "photo") }
@@ -81,11 +92,11 @@ struct ExportView: View {
         }
         .navigationTitle("Save & Share")
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: $showShare) {
-            ShareSheet(items: shareItems)
+        .sheet(item: $sharePayload) { payload in
+            ShareSheet(items: payload.urls)
         }
-        .sheet(isPresented: $showFileExporter) {
-            DocumentExporter(urls: exportURLs)
+        .sheet(item: $exportPayload) { payload in
+            DocumentExporter(urls: payload.urls)
         }
     }
 
@@ -99,19 +110,19 @@ struct ExportView: View {
 
     private func sharePDF() {
         guard let url = ExportService.writePDFTemp(makePDFData(), baseName: baseName) else { return }
-        shareItems = [url]
-        showShare = true
+        sharePayload = SharePayload(urls: [url])
     }
 
     private func saveToFiles(asPDF: Bool) {
+        let urls: [URL]
         if asPDF {
             guard let url = ExportService.writePDFTemp(makePDFData(), baseName: baseName) else { return }
-            exportURLs = [url]
+            urls = [url]
         } else {
-            exportURLs = ExportService.writeJPGs(images, baseName: baseName)
+            urls = ExportService.writeJPGs(images, baseName: baseName)
         }
-        guard !exportURLs.isEmpty else { return }
-        showFileExporter = true
+        guard !urls.isEmpty else { return }
+        exportPayload = SharePayload(urls: urls)
     }
 
     private func saveToPhotos() {

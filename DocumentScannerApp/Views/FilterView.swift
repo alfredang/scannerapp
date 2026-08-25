@@ -1,11 +1,16 @@
 import SwiftUI
 
-/// Filter preset picker with a large live preview and a thumbnail strip.
-/// Applies the chosen filter to the selected page (or to all pages).
+/// Step 2 of the scan flow: adjust (rotate) and pick a filter for the page,
+/// with a large live preview and a thumbnail strip, then continue to Save & Share.
 struct FilterView: View {
     @Bindable var viewModel: ScannerViewModel
     let pageIndex: Int
+    /// Dismisses the entire editor flow (passed through to Save & Share).
+    var onFinish: () -> Void
+    /// Asks Step 1 to relaunch the scanner once this screen has popped.
+    var onRetake: (() -> Void)? = nil
 
+    @Environment(\.dismiss) private var dismiss
     @State private var previews: [FilterType: UIImage] = [:]
 
     private var page: WorkingPage? {
@@ -13,9 +18,13 @@ struct FilterView: View {
         return pages.indices.contains(pageIndex) ? pages[pageIndex] : nil
     }
 
+    private var pageCount: Int { viewModel.working?.pages.count ?? 0 }
+
     var body: some View {
         VStack(spacing: 0) {
             if let page {
+                stepHeader
+
                 Image(uiImage: page.processedImage)
                     .resizable()
                     .scaledToFit()
@@ -23,25 +32,55 @@ struct FilterView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(Color(.systemGroupedBackground))
 
+                adjustBar(page: page)
                 filterStrip(page: page)
+                nextButton
             } else {
                 ContentUnavailableView("No Page", systemImage: "photo")
             }
         }
-        .navigationTitle("Filters")
+        .navigationTitle("Adjust & Filters")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    Button("Apply to All Pages") {
-                        if let filter = page?.filter { viewModel.applyFilterToAll(filter) }
+                if onRetake != nil {
+                    Button("Retake") {
+                        onRetake?()
+                        dismiss()
                     }
-                } label: {
-                    Image(systemName: "ellipsis.circle")
                 }
             }
         }
         .task(id: pageIndex) { await buildPreviews() }
+    }
+
+    // MARK: - Pieces
+
+    private var stepHeader: some View {
+        Text("Adjust and filter, then export")
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .padding(.vertical, 6)
+    }
+
+    private func adjustBar(page: WorkingPage) -> some View {
+        HStack {
+            Button {
+                page.rotateClockwise()
+            } label: {
+                Label("Rotate", systemImage: "rotate.right")
+            }
+            Spacer()
+            if pageCount > 1 {
+                Button("Apply Filter to All Pages") {
+                    viewModel.applyFilterToAll(page.filter)
+                }
+            }
+        }
+        .font(.subheadline)
+        .padding(.horizontal)
+        .padding(.top, 10)
+        .background(.bar)
     }
 
     private func filterStrip(page: WorkingPage) -> some View {
@@ -61,6 +100,21 @@ struct FilterView: View {
             .padding(.horizontal)
             .padding(.vertical, 12)
         }
+        .background(.bar)
+    }
+
+    private var nextButton: some View {
+        NavigationLink {
+            ExportView(viewModel: viewModel, onFinish: onFinish)
+        } label: {
+            Text("Export")
+                .bold()
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.borderedProminent)
+        .controlSize(.large)
+        .padding(.horizontal)
+        .padding(.bottom, 8)
         .background(.bar)
     }
 

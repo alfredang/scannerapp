@@ -36,6 +36,7 @@ on-device OCR. Documents are stored locally with SwiftData — no account, no cl
 | | Feature |
 |---|---|
 | 📸 | **Scanning** — VisionKit auto edge detection, perspective correction, auto-crop, multi-page, manual corner adjust, retake, flash |
+| ⚡ | **Streamlined flow** — Scan → Review → **Export** (AirDrop / share / save) in two taps; **Adjust & Filters** is an optional detour |
 | 🎨 | **8 enhancement filters** — Original, Auto, White Document, Black & White, Denoise, Brighten, Sharpen Text, Receipt (live preview) |
 | 🔤 | **OCR** — Vision text recognition; copy, export, and **search your library by content** |
 | 📄 | **Export** — single/multi-page PDF (A4 / Letter / fit, adjustable quality) and high-quality JPG |
